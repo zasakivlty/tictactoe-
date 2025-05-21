@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Tic Tac Toe Neon</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@600&display=swap');
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    font-family: 'Orbitron', sans-serif;
+    background: linear-gradient(to bottom right, #3a0079, #8f00ff);
+    color: white;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* Bintang animasi */
+  .stars {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    overflow: hidden;
+    z-index: 0;
+  }
+
+  .star {
+    position: absolute;
+    width: 2px;
+    height: 2px;
+    background: white;
+    opacity: 0.7;
+    border-radius: 50%;
+    animation: blinkStar 2s infinite ease-in-out;
+  }
+
+  @keyframes blinkStar {
+    0%, 100% { opacity: 0.2; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.5); }
+  }
+
+  .controls, #scoreboard, #message, #board, .watermark {
+    position: relative;
+    z-index: 1;
+  }
+
+  .controls {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 20px;
+  }
+
+  button {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    padding: 10px 20px;
+    color: white;
+    font-size: 16px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: 0.3s;
+  }
+
+  button:hover {
+    background: rgba(255, 255, 255, 0.3);
+  }
+
+  .board {
+    display: grid;
+    gap: 8px;
+    padding: 10px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.05);
+    position: relative;
+  }
+
+  .cell {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: 0.3s;
+    font-weight: 900;
+    user-select: none;
+  }
+
+  .cell:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  .cell.size-3 {
+    width: 80px;
+    height: 80px;
+    font-size: 64px;
+  }
+  .cell.size-4 {
+    width: 65px;
+    height: 65px;
+    font-size: 52px;
+  }
+  .cell.size-5 {
+    width: 55px;
+    height: 55px;
+    font-size: 42px;
+  }
+
+  .draw {
+    animation: blink 0.5s infinite alternate;
+  }
+
+  @keyframes blink {
+    from { opacity: 1; }
+    to { opacity: 0.3; }
+  }
+
+  .line {
+    position: absolute;
+    height: 4px;
+    background: #00ffff;
+    box-shadow: 0 0 15px #00ffff, 0 0 30px #00ffff;
+    transform-origin: left;
+    border-radius: 4px;
+    z-index: 10;
+    animation: neonGlow 1s ease forwards;
+  }
+
+  @keyframes neonGlow {
+    from { opacity: 0; box-shadow: none; }
+    to { opacity: 1; box-shadow: 0 0 15px #00ffff, 0 0 30px #00ffff; }
+  }
+
+  .dark-mode {
+    background: linear-gradient(to bottom right, #1a002f, #350052);
+  }
+
+  .watermark {
+    margin-top: 20px;
+    font-size: 12px;
+    opacity: 0.6;
+    font-family: 'Orbitron', sans-serif;
+  }
+
+  #scoreboard {
+    display: flex;
+    gap: 30px;
+    margin-bottom: 15px;
+    font-size: 20px;
+    font-weight: 700;
+  }
+
+  #scoreboard div {
+    user-select: none;
+  }
+
+  #message {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 15px;
+    min-height: 28px;
+    text-align: center;
+    user-select: none;
+  }
+</style>
+</head>
+<body>
+  <div class="stars"></div>
+
+  <div class="controls">
+    <button onclick="startGame(3)">3x3</button>
+    <button onclick="startGame(4)">4x4</button>
+    <button onclick="startGame(5)">5x5</button>
+    <button onclick="toggleDarkMode()">Mode Gelap</button>
+    <button onclick="resetGame()">Reset</button>
+  </div>
+
+  <div class="controls" style="margin-bottom: 10px;">
+    <button onclick="setMode('2p')">Mode 2 Pemain</button>
+    <button onclick="setMode('bot')">Mode Lawan Bot</button>
+  </div>
+
+  <div id="scoreboard">
+    <div>X: <span id="scoreX">0</span></div>
+    <div>O: <span id="scoreO">0</span></div>
+    <div>Draw: <span id="scoreDraw">0</span></div>
+  </div>
+
+  <div id="message"></div>
+  <div id="board" class="board"></div>
+  <div class="watermark">Made by Zasaki</div>
+
+  <audio id="clickSound" src="click.mp3"></audio>
+  <audio id="lineSound" src="sword.mp3"></audio>
+
+  <script>
+    let boardSize = 3;
+    let currentPlayer = 'X';
+    let cells = [];
+    const board = document.getElementById('board');
+    let gameMode = '2p';
+    let gameOver = false;
+    let scoreX = 0, scoreO = 0, scoreDraw = 0;
+
+    function createStars(count = 100) {
+      const starsContainer = document.querySelector('.stars');
+      for (let i = 0; i < count; i++) {
+        const star = document.createElement('div');
+        star.classList.add('star');
+        star.style.top = Math.random() * 100 + '%';
+        star.style.left = Math.random() * 100 + '%';
+        star.style.animationDelay = `${Math.random() * 3}s`;
+        starsContainer.appendChild(star);
+      }
+    }
+
+    function startGame(size) {
+      boardSize = size;
+      currentPlayer = 'X';
+      gameOver = false;
+      board.innerHTML = '';
+      clearLines();
+      setMessage('');
+      board.style.gridTemplateColumns = `repeat(${boardSize}, 1fr)`;
+      cells = [];
+
+      for (let i = 0; i < size * size; i++) {
+        const cell = document.createElement('div');
+        cell.className = `cell size-${boardSize}`;
+        cell.addEventListener('click', handleClick, { once: true });
+        board.appendChild(cell);
+        cells.push(cell);
+      }
+
+      if (gameMode === 'bot' && currentPlayer === 'O') {
+        botMove();
+      }
+    }
+
+    function handleClick(e) {
+      if (gameOver) return;
+      const cell = e.target;
+      if (cell.textContent) return;
+      cell.textContent = currentPlayer;
+      cell.style.color = currentPlayer === 'X' ? '#ff00ff' : '#00ffff';
+      document.getElementById('clickSound').play();
+
+      const index = cells.indexOf(cell);
+      if (checkWin(index)) {
+        gameOver = true;
+        drawWinLine(index);
+        document.getElementById('lineSound').play();
+        updateScore(currentPlayer);
+        setMessage(`Player ${currentPlayer} menang!`);
+        return;
+      }
+
+      if (cells.every(c => c.textContent)) {
+        gameOver = true;
+        cells.forEach(c => c.classList.add('draw'));
+        updateScore('draw');
+        setMessage('Permainan seri!');
+        return;
+      }
+
+      currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+      if (gameMode === 'bot' && currentPlayer === 'O') {
+        setTimeout(botMove, 500);
+      }
+    }
+
+    function botMove() {
+      const emptyIndices = cells.map((c, i) => (c.textContent === '' ? i : -1)).filter(i => i !== -1);
+      if (emptyIndices.length === 0) return;
+      const choice = emptyIndices[Math.floor(Math.random() * emptyIndices.length)];
+      cells[choice].textContent = currentPlayer;
+      cells[choice].style.color = '#00ffff';
+      document.getElementById('clickSound').play();
+      if (checkWin(choice)) {
+        gameOver = true;
+        drawWinLine(choice);
+        document.getElementById('lineSound').play();
+        updateScore(currentPlayer);
+        setMessage(`Player ${currentPlayer} menang!`);
+        return;
+      }
+      if (cells.every(c => c.textContent)) {
+        gameOver = true;
+        cells.forEach(c => c.classList.add('draw'));
+        updateScore('draw');
+        setMessage('Permainan seri!');
+        return;
+      }
+      currentPlayer = 'X';
+    }
+
+    function checkWin(index) {
+      const row = Math.floor(index / boardSize);
+      const col = index % boardSize;
+      const player = currentPlayer;
+
+      const rowWin = cells.slice(row * boardSize, (row + 1) * boardSize).every(c => c.textContent === player);
+      const colWin = cells.filter((_, i) => i % boardSize === col).every(c => c.textContent === player);
+      const diagWin1 = row === col && cells.filter((_, i) => i % (boardSize + 1) === 0).every(c => c.textContent === player);
+      const diagWin2 = row + col === boardSize - 1 && cells.filter((_, i) => {
+        return i % (boardSize - 1) === 0 && i !== 0 && i !== boardSize * boardSize - 1;
+      }).every(c => c.textContent === player);
+
+      return rowWin || colWin || diagWin1 || diagWin2;
+    }
+
+    function drawWinLine(index) {
+      clearLines();
+      const line = document.createElement('div');
+      line.className = 'line';
+      const row = Math.floor(index / boardSize);
+      const col = index % boardSize;
+      const gap = 8;
+      const cell = cells[0];
+      const cellRect = cell.getBoundingClientRect();
+      const cellSize = cellRect.width + gap;
+
+      if (cells.slice(row * boardSize, (row + 1) * boardSize).every(c => c.textContent === currentPlayer)) {
+        line.style.width = `${cellSize * boardSize - gap}px`;
+        line.style.top = `${row * cellSize + 10 + cellSize / 2 - 2}px`;
+        line.style.left = `10px`;
+        line.style.transform = 'rotate(0deg)';
+      } else if (cells.filter((_, i) => i % boardSize === col).every(c => c.textContent === currentPlayer)) {
+        line.style.width = `${cellSize * boardSize - gap}px`;
+        line.style.top = `10px`;
+        line.style.left = `${col * cellSize + 10 + cellSize / 2 - 2}px`;
+        line.style.transform = 'rotate(90deg)';
+      } else if (row === col && cells.filter((_, i) => i % (boardSize + 1) === 0).every(c => c.textContent === currentPlayer)) {
+        line.style.width = `${Math.sqrt(2) * (cellSize * boardSize - gap)}px`;
+        line.style.top = '10px';
+        line.style.left = '10px';
+        line.style.transform = 'rotate(45deg)';
+      } else if (row + col === boardSize - 1 && cells.filter((_, i) => i % (boardSize - 1) === 0 && i !== 0 && i !== boardSize * boardSize - 1).every(c => c.textContent === currentPlayer)) {
+        line.style.width = `${Math.sqrt(2) * (cellSize * boardSize - gap)}px`;
+        line.style.top = '10px';
+        line.style.left = '10px';
+        line.style.transform = 'rotate(-45deg)';
+      } else {
+        return;
+      }
+
+      board.appendChild(line);
+    }
+
+    function clearLines() {
+      const oldLines = board.querySelectorAll('.line');
+      oldLines.forEach(line => line.remove());
+      cells.forEach(c => c.classList.remove('draw'));
+    }
+
+    function toggleDarkMode() {
+      document.body.classList.toggle('dark-mode');
+    }
+
+    function resetGame() {
+      startGame(boardSize);
+    }
+
+    function setMode(mode) {
+      if (mode !== '2p' && mode !== 'bot') return;
+      gameMode = mode;
+      resetGame();
+    }
+
+    function updateScore(winner) {
+      if (winner === 'X') {
+        scoreX++;
+        document.getElementById('scoreX').textContent = scoreX;
+      } else if (winner === 'O') {
+        scoreO++;
+        document.getElementById('scoreO').textContent = scoreO;
+      } else if (winner === 'draw') {
+        scoreDraw++;
+        document.getElementById('scoreDraw').textContent = scoreDraw;
+      }
+    }
+
+    function setMessage(text) {
+      document.getElementById('message').textContent = text;
+    }
+
+    createStars();
+    startGame(3);
+  </script>
+</body>
+</html>
